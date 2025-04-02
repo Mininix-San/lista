@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gerenciador de Pedidos - Discord Gold/MIR4</title>
+  <style>
+    body {
+      background-image: url('https://lh3.googleusercontent.com/d/1wdPn1l98dwN2wBfCGBeAC0MKtNed1in2');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      font-family: 'Comic Sans MS', cursive;
+      color: #ddd;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .panel, .tabela-panel {
+      background-color: rgba(33, 33, 33, 0.9);
+      border: 2px solid #00ff0c;
+      border-radius: 15px;
+      padding: 20px;
+      margin: 10px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+    }
+    .panel {
+      width: 400px;
+    }
+    .tabela-panel {
+      width: 90%;
+      max-width: 800px;
+    }
+    .panel h2, .tabela-panel h2 {
+      color: #ecff00;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    form label {
+      display: block;
+      margin: 10px 0 5px;
+      color: #ecff00;
+    }
+    form input[type="text"], form select {
+      width: calc(100% - 20px);
+      padding: 10px;
+      background-color: #444;
+      color: #ddd;
+      border: 2px solid #00ff0c;
+      border-radius: 5px;
+    }
+    form input[type="checkbox"] {
+      margin-left: 5px;
+      transform: scale(1.2);
+    }
+    form button {
+      background-color: #ff0000;
+      border: none;
+      padding: 10px 15px;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      margin-top: 15px;
+      width: 100%;
+      transition: background 0.3s;
+    }
+    form button:hover {
+      background-color: #cc0000;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 0.9em;
+    }
+    th, td {
+      border: 1px solid #00ff0c;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #ecff00;
+    }
+    td button.toggle-btn {
+      background: none;
+      border: none;
+      padding: 5px 0;
+      margin: 0;
+      color: #ddd;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
+    td button.toggle-btn:hover {
+      text-decoration: underline;
+    }
+    td button.status-btn {
+      display: block;
+      width: 100%;
+      border: none;
+      margin: 0;
+      padding: 10px;
+      font-size: 0.9em;
+      color: #fff;
+      cursor: pointer;
+    }
+    td button.apagar-btn {
+      background-color: #ff0000;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      color: white;
+      cursor: pointer;
+      margin: 2px;
+      transition: background 0.3s;
+      font-size: 0.8em;
+    }
+    td button.apagar-btn:hover {
+      background-color: #cc0000;
+    }
+    /* Painel de Controle fixo no canto superior direito */
+    #controlPanel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: rgba(33, 33, 33, 0.9);
+      border: 2px solid #00ff0c;
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      z-index: 1000;
+    }
+    #controlPanel button {
+      background-color: #007bff;
+      border: none;
+      padding: 5px 10px;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: background 0.3s;
+    }
+    #controlPanel button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+  <script>
+    let fila = [];
+
+    // Função para salvar a lista no localStorage
+    function salvarLocal() {
+      localStorage.setItem('filaPedidos', JSON.stringify(fila));
+    }
+
+    // Função para carregar a lista do localStorage
+    function carregarLocal() {
+      const dados = localStorage.getItem('filaPedidos');
+      if (dados) {
+        try {
+          fila = JSON.parse(dados);
+        } catch (e) {
+          console.error("Erro ao carregar dados:", e);
+          fila = [];
+        }
+      }
+      atualizarTabela();
+    }
+
+    function adicionarCliente(event) {
+      event.preventDefault();
+      const nomeCliente = document.getElementById('nomeCliente').value.trim();
+      const produto = document.getElementById('produto').value;
+      const origem = document.getElementById('origem').value;
+      const pago = document.getElementById('pago').checked;
+      
+      if (nomeCliente === "") {
+        alert("Por favor, insira o nome do cliente.");
+        return;
+      }
+      
+      const cliente = {
+        nome: nomeCliente,
+        produto: produto,
+        origem: origem,
+        pedidoFeito: false,
+        pago: pago
+      };
+      
+      fila.push(cliente);
+      document.getElementById('clienteForm').reset();
+      atualizarTabela();
+    }
+
+    function atualizarTabela() {
+      const corpoTabela = document.getElementById('corpoTabela');
+      corpoTabela.innerHTML = "";
+      
+      fila.forEach((cliente, index) => {
+        const linha = document.createElement("tr");
+        
+        // Índice
+        const celulaIndice = document.createElement("td");
+        celulaIndice.textContent = index + 1;
+        
+        // Nome
+        const celulaNome = document.createElement("td");
+        celulaNome.textContent = cliente.nome;
+        
+        // Produto
+        const celulaProduto = document.createElement("td");
+        const btnProduto = document.createElement("button");
+        btnProduto.className = "toggle-btn";
+        btnProduto.textContent = cliente.produto;
+        btnProduto.onclick = () => {
+          cliente.produto = cliente.produto === "Gold" ? "Pacote MIR4" : "Gold";
+          btnProduto.textContent = cliente.produto;
+          salvarLocal();
+        };
+        celulaProduto.appendChild(btnProduto);
+        
+        // Origem
+        const celulaOrigem = document.createElement("td");
+        const btnOrigem = document.createElement("button");
+        btnOrigem.className = "toggle-btn";
+        btnOrigem.textContent = cliente.origem;
+        btnOrigem.onclick = () => {
+          cliente.origem = cliente.origem === "Privado" ? "Ticket" : "Privado";
+          btnOrigem.textContent = cliente.origem;
+          salvarLocal();
+        };
+        celulaOrigem.appendChild(btnOrigem);
+        
+        // Pedido
+        const celulaPedido = document.createElement("td");
+        const btnPedido = document.createElement("button");
+        btnPedido.className = "status-btn";
+        btnPedido.textContent = cliente.pedidoFeito ? "Feito" : "Pendente";
+        btnPedido.style.backgroundColor = cliente.pedidoFeito ? "green" : "red";
+        btnPedido.onclick = () => {
+          cliente.pedidoFeito = !cliente.pedidoFeito;
+          btnPedido.textContent = cliente.pedidoFeito ? "Feito" : "Pendente";
+          btnPedido.style.backgroundColor = cliente.pedidoFeito ? "green" : "red";
+          salvarLocal();
+        };
+        celulaPedido.appendChild(btnPedido);
+        
+        // Pagamento
+        const celulaPagamento = document.createElement("td");
+        const btnPagamento = document.createElement("button");
+        btnPagamento.className = "status-btn";
+        btnPagamento.textContent = cliente.pago ? "Pago" : "Não Pago";
+        btnPagamento.style.backgroundColor = cliente.pago ? "green" : "red";
+        btnPagamento.onclick = () => {
+          cliente.pago = !cliente.pago;
+          btnPagamento.textContent = cliente.pago ? "Pago" : "Não Pago";
+          btnPagamento.style.backgroundColor = cliente.pago ? "green" : "red";
+          salvarLocal();
+        };
+        celulaPagamento.appendChild(btnPagamento);
+        
+        // Ações (apagar cliente)
+        const celulaAcoes = document.createElement("td");
+        const btnApagar = document.createElement("button");
+        btnApagar.className = "apagar-btn";
+        btnApagar.textContent = "Apagar Cliente";
+        btnApagar.onclick = () => {
+          if (confirm("Tem certeza que deseja apagar o cliente?")) {
+            fila.splice(index, 1);
+            atualizarTabela();
+          }
+        };
+        celulaAcoes.appendChild(btnApagar);
+        
+        linha.appendChild(celulaIndice);
+        linha.appendChild(celulaNome);
+        linha.appendChild(celulaProduto);
+        linha.appendChild(celulaOrigem);
+        linha.appendChild(celulaPedido);
+        linha.appendChild(celulaPagamento);
+        linha.appendChild(celulaAcoes);
+        
+        corpoTabela.appendChild(linha);
+      });
+      salvarLocal();
+    }
+
+    // Função para resetar todos os clientes e limpar o armazenamento local
+    function resetarClientes() {
+      if (confirm("Deseja realmente apagar todos os clientes?")) {
+        fila = [];
+        atualizarTabela();
+        localStorage.removeItem('filaPedidos');
+      }
+    }
+
+    // Função para copiar o estado atual da lista (JSON) para a área de transferência
+    function copiarTexto() {
+      const texto = JSON.stringify(fila);
+      navigator.clipboard.writeText(texto)
+        .then(() => alert("Lista copiada para a área de transferência!"))
+        .catch(err => alert("Erro ao copiar: " + err));
+    }
+
+    // Função para colar o texto copiado e atualizar a lista
+    function colarTexto() {
+      const texto = prompt("Cole o texto copiado:");
+      if (texto) {
+        try {
+          fila = JSON.parse(texto);
+          atualizarTabela();
+        } catch (e) {
+          alert("Texto inválido. Certifique-se de copiar o texto corretamente.");
+        }
+      }
+    }
+
+    window.onload = carregarLocal;
+  </script>
+</head>
+<body>
+  <!-- Painel de Controle no canto superior direito -->
+  <div id="controlPanel">
+    <button onclick="resetarClientes()">Resetar Clientes</button>
+    <button onclick="copiarTexto()">Copiar Lista</button>
+    <button onclick="colarTexto()">Colar Lista</button>
+  </div>
+
+  <div class="panel">
+    <h2>Adicionar Pedido</h2>
+    <form id="clienteForm" onsubmit="adicionarCliente(event)">
+      <label for="nomeCliente">Nome do Cliente:</label>
+      <input type="text" id="nomeCliente" placeholder="Insira o nome do cliente" required>
+      
+      <label for="produto">Produto Inicial:</label>
+      <select id="produto">
+        <option value="Gold">Gold</option>
+        <option value="Pacote MIR4">Pacote MIR4</option>
+      </select>
+      
+      <label for="origem">Origem Inicial:</label>
+      <select id="origem">
+        <option value="Privado">Privado</option>
+        <option value="Ticket">Ticket</option>
+      </select>
+      
+      <label for="pago">Já Pagou?</label>
+      <input type="checkbox" id="pago">
+      
+      <button type="submit">Adicionar Cliente</button>
+    </form>
+  </div>
+  
+  <div class="tabela-panel">
+    <h2>Fila de Pedidos</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Cliente</th>
+          <th>Produto</th>
+          <th>Origem</th>
+          <th>Pedido</th>
+          <th>Pagamento</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="corpoTabela">
+        <!-- Os pedidos serão inseridos aqui -->
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
